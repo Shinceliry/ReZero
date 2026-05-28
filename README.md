@@ -1,4 +1,4 @@
-# InvisibleMic
+# ReZero
 
 ## Project Organization
 
