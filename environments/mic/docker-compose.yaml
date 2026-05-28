@@ -1,0 +1,38 @@
+services:
+  invisiblemic:
+    container_name: ${PROJECT_NAME_ENV}_${USER_NAME}
+    hostname: ${USER_NAME}
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+              count: all
+    build:
+      args:
+        - BASE_IMAGE=nvidia/cuda:12.9.0-devel-ubuntu22.04
+        - PYTHON_VERSION=3.10
+        - UID=${HOST_UID}
+        - GID=${HOST_GID}
+        - USER_NAME=${USER_NAME}
+        - PROJECT_NAME=${PROJECT_NAME_ENV}
+      context: ../../
+      dockerfile: environments/Dockerfile
+    env_file:
+      - .env
+    tty: true
+    working_dir: /home/${USER_NAME}/${PROJECT_NAME_ENV}
+    volumes:
+      - /home/${USER_NAME}:/home/${USER_NAME}
+      - /mlnas:/mlnas:rw
+      - /etc/group:/etc/group:ro
+      - /etc/passwd:/etc/passwd:ro
+      - /home/hdd1:/home/hdd1
+      - /home/ssd2:/home/ssd2
+    ports:
+      - 9876:9876
+    ipc: host
+    # network_mode: host

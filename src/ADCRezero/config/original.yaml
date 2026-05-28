@@ -1,0 +1,98 @@
+# Rezero論文オリジナルの設定
+
+audio:
+  sample_rate: 16000            # サンプリングレート[Hz]
+  stft:
+    window_size_ms: 32          # 時間窓長[ms]
+    hop_size_ms: 8              # オーバーラップ[ms]
+    window_type: Hann           # 時間窓の形状
+
+microphone_array:
+  circular:
+    channels: 8                 # マイク数  
+    diameter_m: 0.05            # 円形アイクアレイ直径[cm]
+  linear:
+    channels: 8                 # マイク数
+    aperture_m: 0.225           # 線形アイクアレイ長
+  use_all_pairs: true
+  num_pairs: 28                 # マイクペアの数
+  mic_z_range: [0.7, 0.9]       # マイクのz座標の制限範囲
+
+dataset_generation:
+  room_size_m:
+    min: [3.0, 3.0, 2.5]         # 最小部屋サイズ[m]
+    max: [10.0, 8.0, 4.0]        # 最大部屋サイズ[m]
+  min_source_wall_dist_m: 0.5    # 音源と壁の最小距離[m]
+  t60_s_range: [0.05, 0.7]       # 部屋の残響時間[T60][s]
+  speech_per_mix: [1, 2]         # 話者数範囲
+  noise_per_mix: [1, 4]          # ノイズ数範囲
+  mixture_length_s: [4, 6]       # ミキサー長さ範囲[s]
+  sir_speech_db: [-6, 6]         # speaker vs. speaker SIR[dB]
+  sir_noise_db: [-15, 15]        # noise vs. noise SIR[dB]
+  snr_db: [5, 15]                # speech vs. noise SNR[dB]
+  rir_simulator: FRAM-RIR        # RIRシミュレータ
+  early_reflection_window_ms: [-6, 50]                 # 早期反射成分の時間窓長[ms]
+  mic_z_range: [0.7, 0.9]       # マイクのz座標の制限範囲
+  speaker_elevation_range: [-30, 30]                   # 音源の仰角範囲[°]
+  query_region:
+    angular_width_deg: [30, 90]                        # θh−θl 範囲[°]
+    distance_threshold_m: [0.2, 2.0]                   # dl-dh 範囲[m]
+    Q_distribution:                                    # Q分布 [Q=0, Q=1, Q=2]
+      train:
+        angular: [0.27, 0.65, 0.08]
+        spherical: [0.10, 0.45, 0.45]
+        conical: [0.10, 0.45, 0.45]
+      val:
+        angular: [0.28, 0.36, 0.36]
+        spherical: [0.14, 0.33, 0.53]
+        conical: [0.373, 0.412, 0.215]
+      test:
+        angular: [0.28, 0.36, 0.36]
+        spherical: [0.14, 0.33, 0.53]
+        conical: [0.373, 0.412, 0.215]
+  Q1_distribution:
+    train: [0.2, 0.8]
+    val: [0.2, 0.8]
+    test: [0.2, 0.8]
+
+model:
+  backbone: Multi-Channel BSRNN
+  subband_scheme:                # 周波数ビンのサブバンド分割設定
+    - count: 10
+      bandwidth_hz: 100
+    - count: 12
+      bandwidth_hz: 200
+    - count: 8
+      bandwidth_hz: 500
+    - count: 1
+      total_subbands: 31
+  blocks: 8                      # band+sequence RNN ブロック数
+  feature_dim: 48                # 各サブバンドの隠れ次元
+  bsrnn_hidden_dim: 48         # BSRNNの隠れ次元
+  region_feature_dim: 16         # P 次元
+  aggregation:
+    fixed_number:                # 固定数サンプリング
+      spatial_views: 8           # 角度サンプリング数
+    fixed_anglewidth:            # 固定幅サンプリング
+      anglewidth: 10             # 角度サンプリング幅
+    method: RNN-Loop             # 角度特徴集約方法：[Concat, TAC, TAA, RNN, RNN-Loop]
+  distance_embedding:            # 距離埋め込み
+    embedding_dim: 16            # 埋め込み次元
+
+training:
+  optimizer:
+    type: AdamW
+    initial_lr: 0.001
+    lr_decay:
+      factor: 0.98
+      every_epochs: 2
+  iterations: 240000
+  iterations_per_epoch: 1250
+  batch_size: 8
+  num_workers: 16
+  loss:
+    Q_eq_0:
+      type: freq_MAE
+      lambda: 0.01
+    Q_gt_0:
+      type: SNR

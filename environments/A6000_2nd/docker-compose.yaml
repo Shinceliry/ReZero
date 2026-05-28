@@ -1,0 +1,40 @@
+services:
+  invisiblemic:
+    container_name: ${PROJECT_NAME_ENV}_${USER_NAME}
+    hostname: ${USER_NAME}
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+              count: all
+    build:
+      args:
+        - BASE_IMAGE=nvidia/cuda:12.2.0-devel-ubuntu20.04
+        - PYTHON_VERSION=3.10
+        - UID=${HOST_UID}
+        - GID=${HOST_GID}
+        - USER_NAME=${USER_NAME}
+        - PROJECT_NAME=${PROJECT_NAME_ENV}
+      context: ../../
+      dockerfile: environments/Dockerfile
+    env_file:
+      - .env
+    tty: true
+    working_dir: /home/${USER_NAME}/${PROJECT_NAME_ENV}
+    volumes:
+      - /home/${USER_NAME}:/home/${USER_NAME}    
+      - /home/dataset:/home/dataset
+      - /home/data/${USER_NAME}:/home/data/${USER_NAME}    # 2nd /home/data
+      - /home/data2/${USER_NAME}:/home/data2/${USER_NAME}  # 2nd /home/data2
+      - /home/data3/${USER_NAME}:/home/data3/${USER_NAME}  # 2nd /home/data3 (mounted 1st /data3)
+      - /mnt/home_1st/dataset:/mnt/home_1st/dataset        # 1st /home/dataset
+      - /mlnas:/mlnas
+      - /etc/group:/etc/group:ro
+      - /etc/passwd:/etc/passwd:ro
+    ports:
+      - 9876:9876
+    ipc: host
